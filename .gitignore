@@ -1,0 +1,16 @@
+@"
+node_modules/
+dashboard/node_modules/
+
+.env
+.env.*
+!.env.example
+
+dist/
+build/
+
+*.log
+*.zip
+
+.DS_Store
+"@ | Set-Content .gitignore
