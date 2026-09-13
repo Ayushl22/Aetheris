@@ -91,9 +91,9 @@ flowchart TB
     end
 
     subgraph Workers["⚙️ WORKER LAYER"]
-        W1[Worker 1]
+        W1[Worker N]
         W2[Worker 2]
-        WN[Worker N]
+        WN[Worker 1]
     end
 
     subgraph Persistence["🗄️ PERSISTENCE LAYER"]
