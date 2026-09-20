@@ -1,3 +1,4 @@
+<div align="center">
 # Aetheris
 
 **Reliable background job infrastructure for modern applications.**
