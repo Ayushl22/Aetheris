@@ -683,7 +683,7 @@ Distributed workers, retries, network failures, and process crashes can result i
 
 **Ayush Lambat**
 
-[GitHub](https://github.com/Ayushl22) · [Project Repository](https://github.com/Ayushl22/NexusAI)
+[GitHub](https://github.com/Ayushl22) · [Project Repository](https://github.com/Ayushl22/Aetheris)
 
 ## License
 
