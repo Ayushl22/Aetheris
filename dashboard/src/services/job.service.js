@@ -15,8 +15,15 @@ function generateIdempotencyKey() {
 }
 
 export const jobService = {
-  list() {
-    return apiRequest("/jobs");
+  types() {
+    return apiRequest("/jobs/types");
+  },
+
+  list(projectId) {
+    const query = projectId
+      ? `projectId=${encodeURIComponent(projectId)}&limit=200`
+      : "limit=200";
+    return apiRequest(`/jobs?${query}`);
   },
 
   get(id) {
@@ -62,6 +69,21 @@ export const jobService = {
         every
       })
     });
+  },
+
+  listRecurring(projectId) {
+    return apiRequest(projectId ? `/jobs/recurring?projectId=${encodeURIComponent(projectId)}` : "/jobs/recurring");
+  },
+
+  updateRecurring(scheduleId, changes) {
+    return apiRequest(`/jobs/recurring/${scheduleId}`, {
+      method: "PATCH",
+      body: jsonBody(changes)
+    });
+  },
+
+  deleteRecurring(scheduleId) {
+    return apiRequest(`/jobs/recurring/${scheduleId}`, { method: "DELETE" });
   },
 
   retry(id) {

@@ -1,15 +1,6 @@
-import { useState } from "react";
 import { formatDate } from "../../utils/formatters";
 
 export default function ProjectCard({ project, selected, onSelect, onDelete }) {
-  const [copied, setCopied] = useState(false);
-
-  const copyKey = async () => {
-    await navigator.clipboard.writeText(project.api_key);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
-  };
-
   return (
     <article className={`project-card ${selected ? "selected" : ""}`}>
       <div className="project-card-head">
@@ -22,11 +13,10 @@ export default function ProjectCard({ project, selected, onSelect, onDelete }) {
 
       <p>Created {formatDate(project.created_at)}</p>
 
+      <div className="project-metrics"><div><strong>{project.job_count ?? 0}</strong><span>Total jobs</span></div><div><strong>Active</strong><span>API access</span></div></div>
+
       <div className="api-key-row">
-        <code>{project.api_key}</code>
-        <button className="small-button" onClick={copyKey}>
-          {copied ? "Copied" : "Copy"}
-        </button>
+        <code>{`${project.api_key_prefix || "aetheris"}••••${project.api_key_last_four || "••••"}`}</code>
       </div>
 
       <div className="project-actions">

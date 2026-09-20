@@ -1,21 +1,10 @@
 import LoginForm from "../components/auth/LoginForm";
-
-function AetherisMark() {
-  return (
-    <div className="auth-mark" aria-hidden="true">
-      A
-    </div>
-  );
-}
+import AetherisLogo from "../components/common/AetherisLogo";
 
 function Brand({ compact = false }) {
   return (
     <div className={`auth-brand ${compact ? "auth-brand-compact" : ""}`}>
-      <AetherisMark />
-      <div>
-        <div className="auth-brand-name">Aetheris</div>
-        <div className="auth-brand-subtitle">Distributed Job Scheduler</div>
-      </div>
+      <AetherisLogo size={compact ? 34 : 42} wordmark tagline />
     </div>
   );
 }
@@ -32,7 +21,7 @@ function Landing({ onViewChange }) {
           <Brand />
           <div className="auth-header-status">
             <span className="auth-status-dot" />
-            Control plane ready
+            Durable by design
           </div>
         </header>
 
@@ -87,58 +76,45 @@ function Landing({ onViewChange }) {
                   <span />
                 </div>
                 <span className="auth-console-label">AETHERIS / CONTROL</span>
-                <span className="auth-console-live">LIVE</span>
+                <span className="auth-console-live">ARCHITECTURE</span>
               </div>
 
               <div className="auth-console-body">
                 <div className="auth-console-heading">
                   <div>
-                    <small>QUEUE HEALTH</small>
-                    <strong>99.98%</strong>
+                    <small>DELIVERY MODEL</small>
+                    <strong>Database first</strong>
                   </div>
                   <div className="auth-console-pulse">
                     <i />
-                    Healthy
+                    Explicit handlers
                   </div>
-                </div>
-
-                <div className="auth-mini-chart">
-                  <span />
-                  <span />
-                  <span />
-                  <span />
-                  <span />
-                  <span />
-                  <span />
-                  <span />
-                  <span />
-                  <span />
                 </div>
 
                 <div className="auth-job-list">
                   <div>
-                    <span className="auth-job-icon auth-job-icon-indigo">↗</span>
+                    <span className="auth-job-icon auth-job-icon-indigo">01</span>
                     <div>
-                      <strong>process-webhook</strong>
-                      <small>Worker 03 · 128ms</small>
+                      <strong>Persist</strong>
+                      <small>PostgreSQL system of record</small>
                     </div>
-                    <em className="auth-job-success">completed</em>
+                    <em>accepted</em>
                   </div>
                   <div>
-                    <span className="auth-job-icon auth-job-icon-amber">◷</span>
+                    <span className="auth-job-icon auth-job-icon-amber">02</span>
                     <div>
-                      <strong>generate-report</strong>
-                      <small>Worker 01 · queued</small>
+                      <strong>Dispatch</strong>
+                      <small>BullMQ delivery and scheduling</small>
                     </div>
-                    <em className="auth-job-warning">queued</em>
+                    <em>queued</em>
                   </div>
                   <div>
-                    <span className="auth-job-icon auth-job-icon-green">✓</span>
+                    <span className="auth-job-icon auth-job-icon-green">03</span>
                     <div>
-                      <strong>sync-customers</strong>
-                      <small>Worker 02 · 241ms</small>
+                      <strong>Execute</strong>
+                      <small>Registered worker handlers</small>
                     </div>
-                    <em className="auth-job-success">completed</em>
+                    <em>observed</em>
                   </div>
                 </div>
               </div>
@@ -147,7 +123,7 @@ function Landing({ onViewChange }) {
             <div className="auth-floating-card auth-floating-card-top">
               <span className="auth-floating-icon">↻</span>
               <div>
-                <small>RETRY POLICY</small>
+                <small>RETRIES</small>
                 <strong>Exponential backoff</strong>
               </div>
             </div>
@@ -155,8 +131,8 @@ function Landing({ onViewChange }) {
             <div className="auth-floating-card auth-floating-card-bottom">
               <span className="auth-floating-icon auth-floating-icon-green">●</span>
               <div>
-                <small>WORKERS</small>
-                <strong>3 online · 0 stalled</strong>
+                <small>SAFETY</small>
+                <strong>Data, never executable code</strong>
               </div>
             </div>
           </div>
@@ -199,7 +175,7 @@ export default function LoginPage({ view = "landing", onViewChange }) {
         />
 
         <div className="auth-form-footer">
-          Aetheris · Distributed Job Scheduler
+          Aetheris · Reliable background infrastructure.
         </div>
       </div>
     </main>

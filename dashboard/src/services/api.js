@@ -21,7 +21,7 @@ export async function apiRequest(path, options = {}) {
     });
   } catch {
     throw new Error(
-      `Cannot reach Aetheris backend at ${API_URL}. Make sure the backend is running on port 3000.`
+      `Cannot reach the configured Aetheris backend at ${API_URL}.`
     );
   }
 

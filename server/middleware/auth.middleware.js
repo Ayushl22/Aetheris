@@ -1,4 +1,5 @@
 const jwt = require("jsonwebtoken");
+const config = require("../config/env");
 
 const authenticate = (req, res, next) => {
     try {
@@ -14,7 +15,8 @@ const authenticate = (req, res, next) => {
 
         const decoded = jwt.verify(
             token,
-            process.env.JWT_SECRET
+            config.jwtSecret,
+            { algorithms: ["HS256"], issuer: "aetheris", audience: "aetheris-dashboard" }
         );
 
         req.user = decoded;

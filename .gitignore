@@ -1,16 +1,18 @@
-@"
 node_modules/
 dashboard/node_modules/
 
 .env
 .env.*
 !.env.example
+!dashboard/.env.example
 
 dist/
 build/
+coverage/
 
 *.log
 *.zip
 
 .DS_Store
-"@ | Set-Content .gitignore
+.idea/
+.vscode/

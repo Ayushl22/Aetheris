@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 <div align="center">
 
 # ⚡ Aetheris
@@ -593,3 +594,271 @@ Backend Engineering · Distributed Systems · Job Queues · Redis · BullMQ · P
 *Aetheris — run work without losing control.*
 
 </div>
+=======
+# Aetheris
+
+Aetheris is a multi-tenant background-job scheduler built with React, Express, PostgreSQL, Redis, BullMQ, and Socket.IO. Users can create projects, submit immediate or delayed jobs, manage recurring schedules, inspect execution attempts, and retry terminal failures from a tenant-scoped dead-letter queue.
+
+PostgreSQL is the system of record, BullMQ handles delivery and scheduling, and a separate worker executes registered handlers.
+
+## Architecture
+
+```text
+React dashboard ── JWT ──> Express API ─────────────> PostgreSQL
+       │                       │                         system of record
+       │                       ├── transactional outbox dispatcher
+       │                       │             │
+       │                       │             v
+       │                       └──────────> Redis / BullMQ <── Worker
+       │                                              │          │
+       └──── authenticated Socket.IO <── Redis Pub/Sub ┘          └── handlers
+```
+
+- **Dashboard:** React 19 and Vite. The dashboard provides metrics, seven-day activity, searchable job history, schedule and DLQ operations, project and API-key management, and infrastructure health. It applies live job events and polls while jobs are active as a missed-event fallback.
+- **API:** Express 5 with JWT authentication, hashed project API keys, validation, rate limiting, tenant authorization, security headers, restricted origins, and centralized error handling.
+- **PostgreSQL:** owns users, projects, jobs, attempts, recurring schedules, DLQ records, idempotency keys, and queue-dispatch state.
+- **Redis/BullMQ:** provides priority queues, delays, retry backoff, recurring schedulers, and bounded job retention. Redis uses AOF and `noeviction` in Compose.
+- **Worker:** resolves each BullMQ job to a PostgreSQL record, records each attempt transactionally, dispatches by job type, and publishes lifecycle events.
+- **Socket.IO:** verifies the same signed JWT as the API. Each connection joins only `user:<userId>`; the API relays Redis Pub/Sub events to that room.
+
+## Reliability model
+
+PostgreSQL and Redis do not share an ACID transaction. New jobs and schedules are committed to PostgreSQL first with a deterministic queue identifier and `PENDING` dispatch state. The API attempts immediate delivery, while an in-process outbox dispatcher retries failed delivery. BullMQ's custom job ID makes a replay idempotent if the process crashes after Redis accepts a job but before PostgreSQL records that fact.
+
+An accepted request can therefore return:
+
+- `201` when the initial Redis dispatch succeeded; or
+- `202` when PostgreSQL accepted the work and delivery will be retried.
+
+External requests require an `Idempotency-Key`. A unique `(project_id, idempotency_key)` database constraint ensures concurrent duplicates resolve to the same job.
+
+The job lifecycle is `PENDING → QUEUED` (or `DELAYED`) `→ PROCESSING → COMPLETED`. A failed non-final attempt becomes `RETRYING`; only the final BullMQ attempt becomes `FAILED` and creates one open PostgreSQL DLQ entry. Every attempt is retained in `job_attempts`. A manual DLQ retry archives the open entry, gives the persisted job a new BullMQ ID, and sends it through the outbox again without erasing its attempt history.
+
+Completed BullMQ records are retained for one day or 1,000 records by default. Failed records are retained for seven days or 5,000 records. PostgreSQL job, attempt, and DLQ history is not removed by these BullMQ limits.
+
+## Supported handlers
+
+The worker uses a static registry in `worker/handlers/index.js`. Each entry contains a safe type identifier, display metadata, field hints, an example payload, and the handler function. `GET /jobs/types` exposes only the display metadata to authenticated dashboard clients; it never exposes executable code. Adding a handler requires a code change and deployment. Aetheris does not evaluate payloads, dynamically import user paths, or execute user-provided JavaScript.
+
+| Type | Behavior |
+| --- | --- |
+| `notification.log` | Validates a message and returns delivery metadata. It does not contact an external notification provider. |
+| `http.request` | Performs a bounded HTTP/HTTPS request and returns a response preview. Private/link-local targets and redirects are blocked. |
+| `webhook` | Alias of `http.request`. |
+| `demo.success` | Deterministic success handler for demonstrations and tests. |
+| `demo.flaky` | Fails through `failUntilAttempt`, then succeeds; useful for retry demonstrations. |
+| `demo.fail` | Always fails; useful for final-failure and DLQ demonstrations. |
+
+The API intentionally persists any syntactically valid job type, so producers can submit work before a worker rollout reaches every process. A worker that receives an unregistered type fails it through the normal retry lifecycle with `No handler registered for job type: <type>`; after the final attempt it appears in the DLQ. The dashboard composer is stricter and lists only currently registered types from `/jobs/types`.
+
+In production, HTTP handlers are disabled unless `HTTP_JOB_ALLOWED_HOSTS` contains a comma-separated hostname allowlist. DNS results are also checked for private and link-local addresses. Do not use HTTP jobs as a substitute for a general-purpose trusted network client.
+
+## Database and migrations
+
+`server/database/schema.sql` is the canonical schema for a new installation. Runtime migrations live in `server/database/migrations` and are recorded in `schema_migrations`:
+
+1. `001_initial.sql` adopts or creates the original schema.
+2. `002_reliability_and_tenancy.sql` adds project ownership, idempotency, lifecycle constraints, outbox state, attempt uniqueness, stable schedules, hashed API-key fields, and the persistent DLQ.
+
+Run migrations before starting a worker:
+
+```bash
+npm run db:migrate
+```
+
+The API also runs pending migrations at startup. Migration 002 deliberately stops if a legacy installation has jobs with no `project_id`; the old schema did not contain enough information to infer ownership safely. Back up the database, explicitly assign each legacy row to the correct project, and rerun the migration. It does not delete those rows or invent an owner.
+
+## Configuration
+
+Copy `.env.example` to `.env` and replace every placeholder secret. The backend reads the root `.env`; the dashboard reads `dashboard/.env`.
+
+Important backend variables:
+
+| Variable | Purpose |
+| --- | --- |
+| `PORT` | API port, default `3000`. |
+| `DATABASE_URL` | PostgreSQL connection URI. If omitted, the `POSTGRES_*` variables are used. |
+| `REDIS_URL` | Redis URI, including `rediss://` where TLS is required. |
+| `JWT_SECRET` | JWT HMAC secret; at least 32 characters outside tests. |
+| `API_KEY_PEPPER` | HMAC secret used to hash project API keys at rest; at least 32 characters. |
+| `ADMIN_API_KEY` | Optional system key required by global queue pause/resume endpoints. If omitted, those endpoints are disabled. |
+| `CORS_ALLOWED_ORIGINS` | Comma-separated dashboard origins; required in production. |
+| `SOCKET_ALLOWED_ORIGINS` | Comma-separated Socket.IO origins; required in production. |
+| `WORKER_CONCURRENCY` | Concurrent worker processors, default `3`. |
+| `OUTBOX_POLL_INTERVAL_MS` | Pending-dispatch scan interval, default `2000`. |
+| `JOB_RETENTION_*` | BullMQ age/count limits for completed and failed records. |
+| `HTTP_JOB_TIMEOUT_MS` | HTTP handler timeout, default 10 seconds. |
+| `HTTP_JOB_ALLOWED_HOSTS` | Production hostname allowlist for `http.request` and `webhook`. |
+
+Dashboard variables:
+
+```dotenv
+VITE_API_URL=http://localhost:3000
+VITE_SOCKET_URL=http://localhost:3000
+```
+
+Changing `API_KEY_PEPPER` invalidates existing hashed API keys. JWT and API-key secrets must not be committed or logged.
+
+## Local development
+
+Requirements are Node.js 24, PostgreSQL, and Redis. The example backend configuration expects PostgreSQL on host port `5433` and Redis on `6379`.
+
+```bash
+npm ci
+npm ci --prefix dashboard
+npm run db:migrate
+npm start
+```
+
+In separate terminals:
+
+```bash
+npm run worker
+npm run dev --prefix dashboard
+```
+
+Open `http://localhost:5173`. `GET /health` confirms that the API process is alive. `GET /ready` returns `200` only when PostgreSQL and BullMQ's Redis connection respond.
+
+## Docker Compose
+
+The shared backend image runs either the API or worker, while the dashboard is built into an Nginx image. Compose also creates persistent PostgreSQL and Redis volumes.
+
+Set at least these values in an uncommitted root `.env`:
+
+```dotenv
+POSTGRES_PASSWORD=replace-with-a-strong-password
+JWT_SECRET=replace-with-at-least-32-random-characters
+API_KEY_PEPPER=replace-with-an-independent-32-character-secret
+CORS_ALLOWED_ORIGINS=http://localhost:5173
+SOCKET_ALLOWED_ORIGINS=http://localhost:5173
+```
+
+Then run:
+
+```bash
+docker compose up --build
+```
+
+The dashboard is published on `5173`, the API on `3000`, PostgreSQL on host port `5433`, and Redis on `6379`. Containers communicate with the service names `postgres` and `redis`, not `localhost`. For public deployment, use HTTPS origins, build the dashboard with public `VITE_*` URLs, use TLS-capable managed dependencies or a private network, and terminate TLS at a reverse proxy/load balancer.
+
+## API
+
+### Authentication and projects
+
+```bash
+curl -X POST http://localhost:3000/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Ada","email":"ada@example.com","password":"a-long-demo-password"}'
+
+curl -X POST http://localhost:3000/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"ada@example.com","password":"a-long-demo-password"}'
+
+curl -X POST http://localhost:3000/projects \
+  -H "Authorization: Bearer <jwt>" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Demo project"}'
+```
+
+The project creation response is the only response containing the complete API key. Subsequent project responses expose only its prefix and last four characters. Store the key securely when it is created.
+
+### Immediate and delayed jobs
+
+The request field is `data`, not `payload`.
+
+```bash
+curl -X POST http://localhost:3000/jobs \
+  -H "Authorization: Bearer <jwt>" \
+  -H "Content-Type: application/json" \
+  -d '{"projectId":1,"type":"notification.log","data":{"message":"hello"},"priority":"HIGH"}'
+
+curl -X POST http://localhost:3000/jobs/delayed \
+  -H "Authorization: Bearer <jwt>" \
+  -H "Content-Type: application/json" \
+  -d '{"projectId":1,"type":"notification.log","data":{"message":"later"},"priority":"LOW","delay":5000}'
+```
+
+`delay` and schedule intervals are milliseconds. Priorities are `HIGH`, `MEDIUM`, or `LOW` (numeric values `1`, `5`, and `10` are also accepted). Useful authenticated endpoints are:
+
+| Method and path | Purpose |
+| --- | --- |
+| `GET /jobs?projectId=1&limit=100&offset=0` | List the authenticated user's jobs, optionally by owned project. |
+| `GET /jobs/types` | List safe metadata for the worker's statically registered job types. |
+| `GET /jobs/:databaseJobId` | Read one owned job and all attempts. |
+| `DELETE /jobs/:bullmqJobId` | Cancel owned queued/delayed work; active and terminal jobs cannot be cancelled. |
+| `GET /jobs/failed` | List the user's open, tenant-filtered DLQ records. |
+| `POST /jobs/failed/:dlqId/retry` | Retry an owned DLQ record by its stable `dlq_id`. |
+
+### Recurring schedules
+
+```bash
+curl -X POST http://localhost:3000/jobs/recurring \
+  -H "Authorization: Bearer <jwt>" \
+  -H "Content-Type: application/json" \
+  -d '{"projectId":1,"type":"notification.log","data":{"message":"tick"},"every":60000,"priority":"MEDIUM","maxAttempts":3}'
+
+curl -X PATCH http://localhost:3000/jobs/recurring/<scheduleId> \
+  -H "Authorization: Bearer <jwt>" \
+  -H "Content-Type: application/json" \
+  -d '{"every":120000}'
+```
+
+Use `GET /jobs/recurring?projectId=1` to list schedules and `DELETE /jobs/recurring/:scheduleId` to delete one. Each schedule has an independent UUID, so a project can have multiple schedules of the same type. Project deletion refuses active work, removes its Redis schedulers and cancellable queued jobs, then uses PostgreSQL cascades for its persisted state.
+
+### External project API
+
+Automation clients authenticate with the one-time project API key and must send an idempotency key:
+
+```bash
+curl -X POST http://localhost:3000/api/v1/jobs \
+  -H "X-API-Key: aetheris_<project-key>" \
+  -H "Idempotency-Key: invoice-2026-00042" \
+  -H "Content-Type: application/json" \
+  -d '{"type":"webhook","data":{"url":"https://hooks.example.com/aetheris","method":"POST","body":{"invoiceId":42}},"priority":"HIGH"}'
+```
+
+Repeating the request with the same project and idempotency key returns the original job instead of creating a duplicate.
+
+Global `POST /jobs/pause` and `POST /jobs/resume` operations affect the entire BullMQ queue. They require both a user JWT and the configured `X-Admin-Key`; they are intentionally absent from the normal dashboard.
+
+## Testing and quality checks
+
+```bash
+npm run check
+npm run test:unit
+npm test
+npm run build --prefix dashboard
+docker compose config --no-interpolate
+```
+
+`npm test` always runs the unit suite. The integration suite is opt-in because it creates and deletes test-owned data and needs isolated PostgreSQL, Redis, API, and worker processes:
+
+```bash
+RUN_INTEGRATION_TESTS=1 npm test
+```
+
+On Windows PowerShell, set the variable for the current terminal first:
+
+```powershell
+$env:RUN_INTEGRATION_TESTS = "1"
+npm test
+```
+
+The integration flow covers registration/login, duplicates and invalid credentials, project isolation, hashed API keys, external idempotency, handler metadata, registered and unregistered job types, priorities, immediate/delayed/completed/cancelled jobs, automatic retry recovery, terminal failure and tenant-safe DLQ retry, multiple schedule lifecycle operations, project cleanup, invalid input, unauthorized access, admin-only global controls, and auth rate limiting. GitHub Actions provisions isolated PostgreSQL and Redis services, starts the API and worker, runs this suite, and builds the dashboard.
+
+An opt-in Docker resilience check verifies the transactional-outbox behavior during a real Redis outage. It uses only the `aetheris-integration` Compose project and test ports from `test/integration.compose.env.example`:
+
+```bash
+docker compose --project-name aetheris-integration --env-file test/integration.compose.env.example up --build --detach
+npm run test:resilience
+docker compose --project-name aetheris-integration --env-file test/integration.compose.env.example down --volumes
+```
+
+## Operational notes
+
+- Run one migration process before scaling API instances. Migrations are transactional and serialized by the schema state, but deployment orchestration should still nominate one migrator.
+- The included outbox dispatcher runs in every API process and uses idempotent BullMQ IDs. For higher scale, move dispatch polling to one dedicated process or add row claiming with `FOR UPDATE SKIP LOCKED` to reduce duplicate work.
+- The auth rate limiter is process-local. Put a distributed or gateway-level limiter in front of horizontally scaled API replicas.
+- Back up PostgreSQL and the Redis AOF volume. PostgreSQL remains authoritative, but Redis persistence reduces queue reconstruction and scheduler disruption.
+- Logs are structured JSON and deliberately avoid job payloads, passwords, tokens, and API keys.
+>>>>>>> 7878b8e (finalized commits)

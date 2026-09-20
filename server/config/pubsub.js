@@ -1,11 +1,14 @@
 const { createClient } = require("redis");
+const config = require("./env");
 
-//two redis conection(publisher nd subscriber)
 const publisher = createClient({
-    url: `redis://${process.env.REDIS_HOST}:${process.env.REDIS_PORT}`
+    url: config.redisUrl
 });
 
 const subscriber = publisher.duplicate();
+
+publisher.on("error", (error) => console.error("Redis publisher error:", error.message));
+subscriber.on("error", (error) => console.error("Redis subscriber error:", error.message));
 
 module.exports = {
     publisher,

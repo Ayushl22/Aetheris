@@ -1,40 +1,24 @@
 const express = require("express");
 const authenticate = require("../middleware/auth.middleware");
-
-const {
-    createJob,
-    createDelayedJob,
-    createRecurringJob,
-    getJob,
-    getAllJobs,
-    getFailedJobs,
-    retryFailedJob,
-    cancelJob,
-    pauseQueue,
-    resumeQueue
-} = require("../controllers/job.controller");
+const { requireSystemAdmin } = require("../middleware/security.middleware");
+const { asyncHandler } = require("../utils/errors");
+const { validateJob, validateDelayedJob, validateCreateSchedule, validateUpdateSchedule } = require("../middleware/validation.middleware");
+const controller = require("../controllers/job.controller");
 
 const router = express.Router();
 router.use(authenticate);
-
-router.post("/", createJob);
-
-router.post("/delayed", createDelayedJob);
-
-router.post("/recurring", createRecurringJob);
-
-router.post("/pause", pauseQueue);
-
-router.post("/resume", resumeQueue);
-
-router.get("/", getAllJobs);
-
-router.get("/failed", getFailedJobs);
-
-router.post("/failed/:id/retry", retryFailedJob);
-
-router.delete("/:id", cancelJob);
-
-router.get("/:id", getJob);
-
+router.get("/types", asyncHandler(controller.getJobTypes));
+router.post("/", validateJob, asyncHandler(controller.createJob));
+router.post("/delayed", validateDelayedJob, asyncHandler(controller.createDelayedJob));
+router.get("/recurring", asyncHandler(controller.listRecurringJobs));
+router.post("/recurring", validateCreateSchedule, asyncHandler(controller.createRecurringJob));
+router.patch("/recurring/:scheduleId", validateUpdateSchedule, asyncHandler(controller.updateRecurringJob));
+router.delete("/recurring/:scheduleId", asyncHandler(controller.deleteRecurringJob));
+router.post("/pause", requireSystemAdmin, asyncHandler(controller.pauseQueue));
+router.post("/resume", requireSystemAdmin, asyncHandler(controller.resumeQueue));
+router.get("/failed", asyncHandler(controller.getFailedJobs));
+router.post("/failed/:dlqId/retry", asyncHandler(controller.retryFailedJob));
+router.get("/", asyncHandler(controller.getAllJobs));
+router.delete("/:id", asyncHandler(controller.cancelJob));
+router.get("/:id", asyncHandler(controller.getJob));
 module.exports = router;

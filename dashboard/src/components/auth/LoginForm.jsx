@@ -107,7 +107,7 @@ export default function LoginForm({
               type="text"
               value={name}
               onChange={(event) => setName(event.target.value)}
-              placeholder="Your name"
+              placeholder="Enter your name"
               autoComplete="name"
               maxLength={100}
               required
@@ -122,7 +122,7 @@ export default function LoginForm({
             type="email"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
-            placeholder="you@example.com"
+            placeholder="Enter your email address"
             autoComplete="email"
             required
             autoFocus={!isRegister}
@@ -135,11 +135,12 @@ export default function LoginForm({
             type="password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
-            placeholder="Enter your password"
+            placeholder={isRegister ? "Create a password" : "Enter your password"}
             autoComplete={isRegister ? "new-password" : "current-password"}
-            minLength={1}
+            minLength={isRegister ? 12 : 1}
             required
           />
+          {isRegister && <small>Use at least 12 characters.</small>}
         </label>
 
         {error && (

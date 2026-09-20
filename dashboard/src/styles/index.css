@@ -1,6 +1,6 @@
 :root {
-  color: #F9FAFB;
-  background: #111827;
+  color: #f2eee8;
+  background: #100f12;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
 }
@@ -18,8 +18,8 @@ body,
 
 body {
   min-width: 320px;
-  background: #111827;
-  color: #F9FAFB;
+  background: #100f12;
+  color: #f2eee8;
 }
 
 button,
@@ -37,6 +37,6 @@ button:focus-visible,
 input:focus-visible,
 textarea:focus-visible,
 select:focus-visible {
-  outline: 2px solid #6366F1;
+  outline: 2px solid #a897b9;
   outline-offset: 2px;
 }

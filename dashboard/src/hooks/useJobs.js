@@ -33,15 +33,12 @@ export function useJobs(enabled) {
     }
   }, [enabled, jobs.length]);
 
-  // Initial load.
   useEffect(() => {
     if (!enabled) return;
     loadJobs();
   }, [enabled, loadJobs]);
 
-  // Poll while there is work that can still change state.
-  // Socket.IO gives immediate updates; polling is the reliability fallback
-  // so a missed Pub/Sub/socket event can never leave the table stale.
+  // Polling keeps the table accurate if a Pub/Sub or Socket.IO event is missed.
   useEffect(() => {
     if (!enabled) return;
 

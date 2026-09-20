@@ -1,10 +1,15 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
-export default function RecurringJobForm({ project, onSubmit, submitting }) {
+export default function RecurringJobForm({ project, onSubmit, submitting, jobTypes = [] }) {
   const [type, setType] = useState("");
   const [every, setEvery] = useState(60000);
   const [data, setData] = useState("{}");
   const [error, setError] = useState("");
+
+  const selectedType = jobTypes.find((item) => item.type === type);
+  useEffect(() => {
+    if (!type && jobTypes[0]) setType(jobTypes[0].type);
+  }, [jobTypes, type]);
 
   const submit = async (event) => {
     event.preventDefault();
@@ -31,7 +36,7 @@ export default function RecurringJobForm({ project, onSubmit, submitting }) {
     });
 
     if (ok) {
-      setType("");
+      setType(jobTypes[0]?.type || "");
       setData("{}");
     }
   };
@@ -47,8 +52,12 @@ export default function RecurringJobForm({ project, onSubmit, submitting }) {
 
       <label>
         Job type
-        <input value={type} onChange={(e) => setType(e.target.value)} placeholder="heartbeat" />
+        <select value={type} onChange={(event) => setType(event.target.value)}>
+          {jobTypes.map((item) => <option value={item.type} key={item.type}>{item.label} · {item.type}</option>)}
+        </select>
       </label>
+
+      {selectedType && <p className="field-help">{selectedType.description}</p>}
 
       <label>
         Every (milliseconds)
@@ -56,13 +65,13 @@ export default function RecurringJobForm({ project, onSubmit, submitting }) {
           type="number"
           min="1000"
           value={every}
-          onChange={(e) => setEvery(e.target.value)}
+          onChange={(event) => setEvery(event.target.value)}
         />
       </label>
 
       <label>
         Data
-        <textarea rows={5} value={data} onChange={(e) => setData(e.target.value)} />
+        <textarea rows={5} value={data} onChange={(event) => setData(event.target.value)} />
       </label>
 
       {error && <div className="form-error">{error}</div>}

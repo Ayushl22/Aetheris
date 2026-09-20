@@ -1,10 +1,16 @@
 {
   "name": "aetheris",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Multi-tenant distributed job scheduling and background processing platform",
+  "main": "server/server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node server/server.js",
+    "worker": "node worker/worker.js",
+    "db:migrate": "node server/database/migrate.js",
+    "test": "node --require ./test/setup.js --test --test-concurrency=1",
+    "test:unit": "node --require ./test/setup.js --test --test-concurrency=1 test/unit/*.test.js",
+    "test:resilience": "node scripts/resilience-check.js",
+    "check": "node scripts/check.js"
   },
   "keywords": [],
   "author": "",

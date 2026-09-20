@@ -1,7 +1,8 @@
 const pool = require("../config/database");
+const { hashApiKey } = require("../utils/apiKey");
+const { asyncHandler } = require("../utils/errors");
 
-const authenticateApiKey = async (req, res, next) => {
-    try {
+const authenticateApiKey = asyncHandler(async (req, res, next) => {
         const apiKey = req.headers["x-api-key"];
 
         if (!apiKey) {
@@ -10,12 +11,25 @@ const authenticateApiKey = async (req, res, next) => {
             });
         }
 
-        const result = await pool.query(
+        if (typeof apiKey !== "string" || apiKey.length > 255) {
+            return res.status(401).json({ message: "Invalid API key" });
+        }
+        const apiKeyHash = hashApiKey(apiKey);
+        let result = await pool.query(
             `SELECT id, name, user_id
             FROM projects
-            WHERE api_key = $1`,
-            [apiKey]
+            WHERE api_key_hash = $1`,
+            [apiKeyHash]
         );
+
+        if (result.rows.length === 0) {
+            result = await pool.query(
+                `UPDATE projects SET api_key_hash = $1, api_key_prefix = $2,
+                    api_key_last_four = $3, api_key = NULL
+                 WHERE api_key = $4 RETURNING id, name, user_id`,
+                [apiKeyHash, apiKey.slice(0, 13), apiKey.slice(-4), apiKey]
+            );
+        }
 
         if (result.rows.length === 0) {
             return res.status(401).json({
@@ -26,14 +40,6 @@ const authenticateApiKey = async (req, res, next) => {
         req.project = result.rows[0];
 
         next();
-
-    } catch (error) {
-        console.error(error);
-
-        res.status(500).json({
-            message: "API key authentication failed"
-        });
-    }
-};
+});
 
 module.exports = authenticateApiKey;
