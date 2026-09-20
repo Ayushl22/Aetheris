@@ -1,5 +1,6 @@
-
-# Aetheris
+<div align="center">
+ 
+# ⚡Aetheris
 
 **Reliable background job infrastructure for modern applications.**
 
@@ -16,6 +17,10 @@ Applications submit jobs to Aetheris instead of executing them inline. Aetheris 
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
 [![CI](https://img.shields.io/badge/CI-GitHub%20Actions-2088FF?logo=githubactions&logoColor=white)](https://docs.github.com/actions)
 [![License](https://img.shields.io/badge/License-ISC-blue)](#license)
+
+</div>
+
+---
 
 > **Core architecture:** PostgreSQL is the durable source of truth; Redis/BullMQ is the derived execution layer.
 
