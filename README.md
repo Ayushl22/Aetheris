@@ -673,8 +673,16 @@ Distributed workers, retries, network failures, and process crashes can result i
 | CI | GitHub Actions |
 | Testing | Node.js Test Runner |
 
+## Author
+
+**Ayush Lambat**
+
+[GitHub](https://github.com/Ayushl22) · [Project Repository](https://github.com/Ayushl22/NexusAI)
+
 ## License
 
-This project is licensed under the **ISC License**.
+Licensed under the **MIT License** — free to use, modify, and distribute per the license terms.
+
+---
 
 See [`package.json`](./package.json) for the license declaration.
